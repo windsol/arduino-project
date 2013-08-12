@@ -1,0 +1,262 @@
+/*
+  Synt - Vending Machine Interface Module
+ 
+ This sketch connects to an application server and queries for new events to process.
+ After parsing the event the suitable relay is activated to simulate a panel selection.
+ Once the product is dispensed, the module sends a confirmation to the application server 
+ and queries for the next event. 
+ 
+  - Query for events:
+ 
+    GET http://servidor.aplicaciones.com.ar/events?a=q&id=1
+ 
+    Response
+    
+      eventid=1,productid=1,dest=1,type=1;eventid=2,productid=2,dest=1,type=1
+
+  - Confirmation of event processed
+  
+ 
+ Circuit:
+ 
+  * Arduino UNO R3
+  * Ethernet shield attached to Arduino UNO
+  * 8 Relays to control Vending machine selection panel
+  * 1 Relay to control Vend enable on Jones Plug (pins 1 and 3 of Jones Plug)
+  
+ created 10 Aug 2013
+ by Lionel Siclari
+ lsiclari@gmail.com
+ 
+  
+ */
+
+#include <SPI.h>
+#include <Ethernet.h>
+
+
+// Enter a MAC address for your controller below.
+// Newer Ethernet shields have a MAC address printed on a sticker on the shield
+byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+// use the numeric IP instead of the name for the server:
+IPAddress server(192,168,1,178);  // app server
+
+// Set the static IP address to use.
+IPAddress ip(192,168,1,177);
+
+// ID of the Vending Machine where this module is installed
+String moduleId  = "1";
+
+// Initialize the Ethernet client library
+// with the IP address and port of the server 
+// that you want to connect to (port 80 is default for HTTP):
+EthernetClient client;
+
+void setup() {
+ // Open serial communications:
+  Serial.begin(9600);
+
+  // start the Ethernet connection:
+  Serial.println("try to congifure using IP address");
+  Ethernet.begin(mac, ip);
+  
+  // give the Ethernet shield a second to initialize:
+  delay(1000);
+}
+
+void loop(){
+  
+}
+
+/*
+void loop()
+{
+  query();
+
+  String r = getResponse();  
+
+  String event = processResponse(r);
+  if (event != ""){
+   processEventString(event);
+    
+  }
+  
+ 
+  delay(10000);
+
+  Serial.println();
+  Serial.println("disconnecting.");
+  client.stop();
+}
+
+void query(){
+   Serial.println("Querying...");
+
+  // if you get a connection, report back via serial:
+  if (client.connect(server, 9090)) {
+    Serial.println("connected");
+    // Make a HTTP request:
+    client.println("GET /app/events?a=q&id=" + moduleId + " HTTP/1.1");
+    client.println("Host: arduino");
+    client.println("Connection: close");
+    client.println();
+  } 
+  else {
+    // kf you didn't get a connection to the server:
+    Serial.println("connection failed");
+  } 
+}
+
+String getResponse(){
+  // if there are incoming bytes available 
+  // from the server, read them and print them:
+  String response = "";
+   
+  Serial.println("Reading response...");
+  while (client.connected()) {
+    if (client.available()) {
+      char c = client.read();
+      response += c;
+      do {
+          char c = client.read();
+          response += c;
+      } while(client.available());
+    } 
+  }
+  return response;  
+}
+
+String processResponse(String r){
+
+  Serial.println("Processing response...");
+  
+  int eventsPos = r.indexOf("eventid");
+  if ( eventsPos == -1){
+    Serial.println("Found no events to process on response " + r);
+    return "";
+  }
+  
+  String events = r.substring(eventsPos, r.length());
+  return buildEvent(events); 
+}
+
+void processEvent(String eventid, String productid, String dest, String type){
+  if (dest != moduleId){
+    Serial.println("Ignoring event for dest " + dest);
+    return;
+  }  
+  
+  // activate relee
+  
+  String st = "ok";
+  // confirm
+  while (confirmEvent(eventid, st)){
+    delay(5000);
+  }
+}
+
+int confirmEvent(String eventid, String st){
+  int confirmed = 0;
+  if (client.connect(server, 9090)) {
+    Serial.println("Sending event confirmation...");
+    client.println("GET /app/events?a=u&id=" + moduleId + "&e=" + eventid + "&r=" + st + " HTTP/1.1");
+    client.println("Host: arduino");
+    client.println("Connection: close");
+    client.println();
+    confirmed = 1;
+  }
+  return confirmed;
+}
+
+String buildEvent(String events){
+   String thisEvent;
+   // process one event at a time
+   int pos = events.indexOf(';');
+   if(pos != -1){
+      thisEvent = events.substring(0, pos);        
+   }
+   else {  // here after the last comma is found
+     if(events.length() > 0){
+       thisEvent = events;
+     }
+   }    
+   Serial.println("Finish build events: " + thisEvent);
+   return thisEvent;
+}
+
+void processEventString (String data){
+  int pos = 0;
+  String eventid;
+  String productid;
+  String dest;
+  String type;  
+
+  String thisToken;
+  do
+  {
+      pos = data.indexOf(',');
+      if(pos != -1)
+      {
+        thisToken = data.substring(0, pos);
+        data = data.substring( pos+1, data.length());
+        // printKeyValue(thisToken);      
+      }
+      else
+      {  // here after the last comma is found
+         if(data.length() > 0){
+           thisToken = data;
+           //Serial.println("2: " + thisToken); 
+           //printKeyValue(thisToken);
+         }
+      }
+      String thisKey = getKey(thisToken);
+      String value = getValue(thisToken);
+      if (thisKey == "eventid"){
+        eventid = value ;
+      }
+      else if (thisKey == "productid"){
+        productid = value;
+      }
+      else if (thisKey == "dest"){
+        dest = value;
+      }
+      else if (thisKey == "type"){
+        type = value ;
+      }
+   }
+   while(pos >=0);
+
+   processEvent(eventid, productid, dest, type);
+}
+
+String getKey (String token){
+  int pos = 0;
+
+  pos = token.indexOf('=');
+  return token.substring(0, pos);  
+}
+
+String getValue(String data){
+  int pos = 0;
+
+  pos = data.indexOf('=');
+  return data.substring( pos+1, data.length());
+}
+
+void printKeyValue(String data){
+  int pos = 0;
+
+  pos = data.indexOf('=');
+  String thisKey = data.substring(0, pos);  
+  String value = data.substring( pos+1, data.length());
+  Serial.println("[" + thisKey + "," + value + "]"); 
+  
+}
+
+int getIntValue(String value){
+  char num[value.length()];
+  value.toCharArray(num, value.length()); 
+  return atoi(num);
+}
+
+*/

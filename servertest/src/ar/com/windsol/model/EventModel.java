@@ -22,6 +22,7 @@ public class EventModel {
 			events.put(1L, new ArrayList<Event>());
 		}
 		e.setId(sequence.incrementAndGet());
+		e.setDestination("1");
 		events.get(1L).add(e);
 	}
 	
@@ -35,7 +36,11 @@ public class EventModel {
 		for ( Long id : originIds){
 			if ( events.containsKey(id)){
 				List<Event> e = events.get(id); 
-				ev.addAll(e);
+				for (Event event : e){
+					if ( !event.isProcessed()){
+						ev.add(event);
+					}
+				}
 			}
 		}
 		
@@ -47,10 +52,35 @@ public class EventModel {
 		List<Event> ev = new ArrayList<Event>();
 		for ( Long id : events.keySet()){
 			List<Event> e = events.get(id);
-			ev.addAll(e);
+			for (Event event : e){
+				if ( !event.isProcessed()){
+					ev.add(event);
+				}
+			}
+			
 		}
 		
 		return ev;
+	}
+
+	public boolean remove(String origin, String eventId) {
+		boolean found = false;
+		if ( events.containsKey(Long.parseLong(origin))){
+			List<Event> evs = events.get(Long.parseLong(origin));
+			for (Event e : evs){
+				if (e.getId().equals(Long.parseLong(eventId))){
+					if ( !e.isProcessed()){
+						e.setProcessed(true);
+						found = true;
+					}
+					break;
+				}
+			}
+			
+		}
+		
+		return found;
+		
 	}
 
 }

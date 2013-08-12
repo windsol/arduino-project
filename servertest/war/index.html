@@ -64,13 +64,15 @@
     .content {
       text-align: center;
       background-color: gray;
+	  z-index: 1;
     }
 
     .products {
-      position: absolute;
-      margin-left: 480px;
+	  float: right;
       margin-top: -400px;
-    }
+      margin-right: 380px;
+	  z-index: 100;
+	}
 
 </style>
 
@@ -79,17 +81,21 @@
 
     <div class="header"><h2>Demo Synt</h2></div>
     <div class="content">
-        <div class="vm">
-            <img src="images/vm.jpg"></img>
-        </div>
-
-        <div class="products">
-          <table border="0">
-            <tr><td><img class="prod" value="COKE" src="images/coke_48.png"/></td></tr>
-            <tr><td><img class="prod" value="SPRITE" src="images/sprite_48.png"</td></tr>
-            <tr><td><img class="prod" value="7UP" src="images/7up_48.png"</td></tr>
-          </table>
-        </div>      
+        
+	  <table border="0" align="center">
+		<tr>
+			<td><img src="images/vm.jpg"/></td>
+			<td>&nbsp;</td>
+			<td>
+				<table border="0">
+					<tr><td><img class="prod" value="1" src="images/coke_48.png"/></td><td>&nbsp;</td><td><img class="prod" value="2" src="images/coke_48.png"/></td></tr>
+					<tr><td><img class="prod" value="3" src="images/sprite_48.png"/></td><td>&nbsp;</td><td><img class="prod" value="4" src="images/sprite_48.png"/></td></tr>
+					<tr><td><img class="prod" value="5" src="images/7up_48.png"/></td><td>&nbsp;</td><td><img class="prod" value="6" src="images/7up_48.png"/></td></tr>
+					<tr><td><img class="prod" value="7" src="images/coke_48.png"/></td><td>&nbsp;</td><td><img class="prod" value="8" src="images/coke_48.png"/></td></tr>
+				</table>
+			</td>
+		</tr>
+	  </table>
     </div>
 </body>
 </html>

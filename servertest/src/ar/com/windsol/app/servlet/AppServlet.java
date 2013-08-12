@@ -24,6 +24,14 @@ public class AppServlet extends HttpServlet {
 
 	static class Result{
 		String status;
+
+		@Override
+		public String toString() {
+			return "status=" + status;
+		}
+		
+		
+		
 	}
 	
 	private static final String
@@ -34,7 +42,11 @@ public class AppServlet extends HttpServlet {
 		
 	private static final String 
 		PARAM_EVENT = "e",
-		PARAM_ID    = "id";
+		PARAM_ID    = "id",
+		PARAM_RESULT = "r",
+		PARAM_MESSAGE = "m",
+		RESULT_OK = "ok",
+		PARAM_NG = "ng";
 	
 	private static final Logger logger = Logger.getLogger(AppServlet.class);
 	
@@ -66,19 +78,19 @@ public class AppServlet extends HttpServlet {
 		try {
 			result = executeAction(req);
 			
-			json = gson.toJson(result);
+			//json = gson.toJson(result);
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			json = "error";
+			result = "error";
 		}
 
-        resp.setContentType("text/json");
+        resp.setContentType("text/plain");
         resp.setCharacterEncoding("UTF-8");
-        resp.getWriter().print(json);
+        resp.getWriter().print(result);
 
-        logger.debug(json);
+        logger.debug(result);
 	}
 	
 	private List<Long> buildParamList(String paramIds){
@@ -115,7 +127,7 @@ public class AppServlet extends HttpServlet {
 			result = processGetEvents(req.getParameter(PARAM_ID));
 		}
 		else if (action.equals(UPDATE)){
-			
+			result = processUpdate(req);
 		}
 		else {
 			throw new Exception ("Unsuported action: " + action);
@@ -124,21 +136,48 @@ public class AppServlet extends HttpServlet {
 		return result;
 	}
 	
-	private List<Event> processGetEvents(String id) {
-		logger.debug("GetEvents ID: " +id);
+	private String processUpdate(HttpServletRequest req) {
+		String origin = req.getParameter(PARAM_ID);
+		String eventId = req.getParameter(PARAM_EVENT);
+		String result = req.getParameter(PARAM_RESULT);
+		logger.debug("processUpdate ID: " +origin + ", eventId: " + eventId +", result:" +result);
 		
+		
+		boolean r = false;
+		if ( RESULT_OK.equals(result)){
+			r = new EventModel().remove(origin, eventId);
+		}
+		
+		
+		return r ? "ok" : "not found";
+	}
+
+	private String processGetEvents(String id) {
+		logger.debug("GetEvents ID: " +id);
+		StringBuilder result = new StringBuilder();
 		List<Long> ids = buildParamList(id);
 		
-		return new EventModel().getEvents(ids);
+		List<Event> events = new EventModel().getEvents(ids);
+		
+		for (Event event : events){
+			result.append(event).append(";");
+		}
+		String res = result.toString();
+		if (res.length() > 0){
+			res = res.substring(0, res.length() -1);
+		}
+		
+		logger.debug("GetEvents result: " +res);
+		return res;
 	}
 	
-	private Result processAddEvent(String event){
+	private String processAddEvent(String event){
 		logger.debug("AddEvent: " +event);
 		Result r = new Result();
 		
 		new EventModel().addEvent(new Event(event));
 		r.status = "OK";
-		return r;
+		return r.toString();
 	}
 
 
