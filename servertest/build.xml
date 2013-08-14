@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<project name="vendmodule" default="war" basedir=".">
+	
+  <property environment="env"/>
+
+  <path id="project.class.path">
+    <pathelement location="war/WEB-INF/classes"/>
+    <!-- Add any additional non-server libs (such as JUnit) -->
+    <fileset dir="lib" includes="**/*.jar"/>
+    <fileset dir="war/WEB-INF/lib" includes="**/*.jar"/>
+  </path>
+
+  <target name="libs" description="Copy libs to WEB-INF/lib">
+    <mkdir dir="war/WEB-INF/lib" />
+    <copy todir="war/WEB-INF/lib">
+      <fileset dir="lib" includes="*.jar"/>
+    </copy>
+  </target>
+
+  <target name="javac" description="Compile java source to bytecode">
+    <mkdir dir="war/WEB-INF/classes"/>
+    <javac srcdir="src" includes="**" encoding="utf-8"
+        excludes=""
+        destdir="war/WEB-INF/classes"
+        source="1.6" target="1.6" nowarn="true"
+        debug="true" debuglevel="lines,vars,source">
+      <classpath refid="project.class.path"/>
+    </javac>
+    <copy todir="war/WEB-INF/classes">
+      <fileset dir="src" excludes="**/*.java"/>
+    </copy>  	
+  </target>
+
+
+  <target name="build" depends="libs,javac" description="Build this project" />
+
+
+  <target name="war" depends="build" description="Create a war file">
+    <mkdir dir="out"/>
+    <zip destfile="out/vendmodule.war" basedir="war"/>
+  </target>
+	
+  <target name="clean" description="Cleans this project">
+    <delete dir="war/WEB-INF/classes"  failonerror="false" />
+    <delete dir="out" failonerror="false" />
+    <delete>
+      <fileset dir="war/WEB-INF/lib" includes="*.jar"/>
+    </delete>
+  </target>
+
+  <tstamp>
+    <format property="TODAY" pattern="yyyy-MM-dd_HH-mm" />
+  </tstamp>
+
+
+</project>

@@ -38,7 +38,9 @@ public class AppServlet extends HttpServlet {
 	    ACTION 	= "a",   // action param 
 	    ADD 	= "a",
 		QUERY 	= "q",   // query for events
-		UPDATE 	= "u";	 // update 
+		UPDATE 	= "u",	 // update
+		COUNT 	= "c";
+	
 		
 	private static final String 
 		PARAM_EVENT = "e",
@@ -129,6 +131,9 @@ public class AppServlet extends HttpServlet {
 		else if (action.equals(UPDATE)){
 			result = processUpdate(req);
 		}
+		else if (action.equals(COUNT)){
+			result = "" + count();
+		}		
 		else {
 			throw new Exception ("Unsuported action: " + action);
 		}
@@ -150,6 +155,13 @@ public class AppServlet extends HttpServlet {
 		
 		
 		return r ? "ok" : "not found";
+	}
+
+	private int count() {
+		StringBuilder result = new StringBuilder();
+		List<Long> ids = buildParamList("1");
+		
+		return new EventModel().getEvents(ids).size();
 	}
 
 	private String processGetEvents(String id) {

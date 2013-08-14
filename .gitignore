@@ -1,2 +1,3 @@
 servertest/bin/*
-
+servertest/out/*
+servertest/war/*
