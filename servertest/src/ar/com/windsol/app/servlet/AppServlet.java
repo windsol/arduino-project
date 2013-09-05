@@ -17,9 +17,6 @@ import org.apache.log4j.Logger;
 import ar.com.windsol.data.Event;
 import ar.com.windsol.model.EventModel;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
 public class AppServlet extends HttpServlet {
 
 	static class Result{
@@ -51,13 +48,6 @@ public class AppServlet extends HttpServlet {
 		PARAM_NG = "ng";
 	
 	private static final Logger logger = Logger.getLogger(AppServlet.class);
-	
-    private static final Gson gson;
-    
-    static {
-        GsonBuilder builder = new GsonBuilder();
-        gson = builder.create();
-    }
 
 	
 	@Override
@@ -92,7 +82,7 @@ public class AppServlet extends HttpServlet {
         resp.setCharacterEncoding("UTF-8");
         resp.getWriter().print(result);
 
-        logger.debug(result);
+        //logger.debug(result);
 	}
 	
 	private List<Long> buildParamList(String paramIds){

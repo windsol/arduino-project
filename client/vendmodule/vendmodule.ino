@@ -2,33 +2,39 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
-#define VEND_RELAY 9               // PIN for enabling vend relay
-#define RELAY_1 1                  // PIN for enabling column 1 relay
-#define RELAY_2 2                  // PIN for enabling column 2 relay
-#define RELAY_3 3                  // PIN for enabling column 3 relay
-#define RELAY_4 4                  // PIN for enabling column 4 relay
-#define RELAY_5 5                  // PIN for enabling column 5 relay
-#define RELAY_6 6                  // PIN for enabling column 6 relay
-#define RELAY_7 7                  // PIN for enabling column 7 relay
-#define RELAY_8 8                  // PIN for enabling column 8 relay
+#define VEND_RELAY 14               // PIN for enabling vend relay
+#define RELAY_1 2                  // PIN for enabling column 1 relay
+#define RELAY_2 3                  // PIN for enabling column 2 relay
+#define RELAY_3 4                  // PIN for enabling column 3 relay
+#define RELAY_4 5                  // PIN for enabling column 4 relay
+#define RELAY_5 6                  // PIN for enabling column 5 relay
+#define RELAY_6 7                  // PIN for enabling column 6 relay
+#define RELAY_7 8                  // PIN for enabling column 7 relay
+#define RELAY_8 9                  // PIN for enabling column 8 relay
 
-#define QUERY_TIME 10000           // time between event queries.
+#define QUERY_TIME 5000           // time between event queries.
 
-#define RELAY_ON_TIME 100          // milisecs of time the relay will be enabled.
+#define RELAY_ON_TIME 1000          // milisecs of time the relay will be enabled.
 
-#define SERVER_PORT 9090           // app server port
+#define SERVER_PORT 8080           // app server port
 
 // Enter a MAC address for your controller below.
 // Newer Ethernet shields have a MAC address printed on a sticker on the shield
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-// use the numeric IP instead of the name for the server:
+
+byte gateway[] = {192, 168, 1, 1};
 IPAddress server(192,168,1,178);  // app server
+// windsolvendmodule-env.elasticbeanstalk.com
+//char server[] = "windsolvendmodule-env.elasticbeanstalk.com";
+//char server[] = "synt.dyndns.org";
 
 // Set the static IP address to use.
-IPAddress ip(192,168,1,177);
+IPAddress ip(192,168,1,90);
 
 // ID of the Vending Machine where this module is installed
 String moduleId  = "1";
+
+unsigned long time;
 
 // Initialize the Ethernet client library
 // with the IP address and port of the server 
@@ -37,8 +43,20 @@ EthernetClient client;
 
 void setup()
 {
+  digitalWrite(RELAY_1, 1);
+  digitalWrite(RELAY_2, 1);
+  digitalWrite(RELAY_3, 1);
+  digitalWrite(RELAY_4, 1);
+  digitalWrite(RELAY_5, 1);
+  digitalWrite(RELAY_6, 1);
+  digitalWrite(RELAY_7, 1);
+  digitalWrite(RELAY_8, 1);
+  digitalWrite(VEND_RELAY, 1);  
+
+  delay(1000);
+  
   // Set all relay pins as OUTPUT
-  pinMode(VEND_RELAY, OUTPUT);          // tells arduino RELAY is an output
+  // tells arduino RELAY is an output
   pinMode(RELAY_1, OUTPUT);
   pinMode(RELAY_2, OUTPUT);
   pinMode(RELAY_3, OUTPUT);
@@ -47,12 +65,14 @@ void setup()
   pinMode(RELAY_6, OUTPUT);
   pinMode(RELAY_7, OUTPUT);
   pinMode(RELAY_8, OUTPUT);
-         
+  pinMode(VEND_RELAY, OUTPUT);
+  
+  delay(1000);    
   // Open serial communications:
   Serial.begin(9600);
 
   // start the Ethernet connection:
-  Serial.println("try to congifure using IP address");
+  Serial.println("try to configure using static IP address");
   Ethernet.begin(mac, ip);
   
   // give the Ethernet shield a second to initialize:
@@ -83,7 +103,8 @@ int query(){
    if (client.connect(server, SERVER_PORT)) {
       Serial.println("connected");
       // Make a HTTP request:
-      client.println("GET /app/events?a=q&id=" + moduleId + " HTTP/1.1");
+      time = millis();
+      client.println("GET /app/events?a=q&id=" + moduleId + "&" + String(time, DEC) + " HTTP/1.1");
       client.println("Host: arduino");
       client.println("Connection: close");
       client.println();
@@ -103,7 +124,8 @@ String getResponse(){
   boolean found = false; 
   Serial.println("Reading response...");
   int i = 0;
-  while (client.connected() && !found) {
+  int loops = 0;
+  while (client.connected() && !found && loops < 1000) {
     delay(1);
     if (client.available() && !found) {
       do {
@@ -118,10 +140,19 @@ String getResponse(){
             found = true;
           } 
           i++;
+          loops = 0;
       } while(client.available() && !found);
-    } 
+    }
+    else {
+      loops++;
+      delay(10);
+    }  
+  }
+  if (loops >= 1000){
+    Serial.println("Reading timeout...");
   }
   Serial.println("Read " + String(i, DEC) + " chars. Returned " + String(response.length(), DEC));
+  client.flush();
   client.stop();
   Serial.println("disconnecting...");
   return response;
@@ -170,13 +201,16 @@ String vend(String productid){
   int relay = getIntValue(productid);
   Serial.println("Vend!!! " + String(relay, DEC));
   if (relay >= 1 && relay <=8){
-    digitalWrite(VEND_RELAY, HIGH);
-    delay(RELAY_ON_TIME);
+    relay++;
     digitalWrite(VEND_RELAY, LOW);
-    digitalWrite(relay, HIGH);
     delay(RELAY_ON_TIME);
+    digitalWrite(VEND_RELAY, HIGH);
+    delay(100);
     digitalWrite(relay, LOW);
+    delay(RELAY_ON_TIME);
+    digitalWrite(relay, HIGH);
     st = "ok";
+    Serial.println("Vend " + String(relay, DEC) + " " + st);
   }
   delay(1000);
   

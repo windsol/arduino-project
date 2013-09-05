@@ -7,7 +7,7 @@ import org.eclipse.jetty.webapp.WebAppContext;
 public class AppServer {
 
 	private static final String WAR_DIR = "war/";
-	private static final int PORT = 9090;
+	private static final int PORT = 8080;
 	private static final Logger logger = Logger.getLogger(AppServer.class);
 	
 	public AppServer(){

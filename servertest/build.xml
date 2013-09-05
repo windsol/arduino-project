@@ -3,6 +3,11 @@
 	
   <property environment="env"/>
 
+  <path id="jetty.plugin.classpath">
+	<fileset dir="lib" includes="*.jar"/>
+  </path>
+  <taskdef classpathref="jetty.plugin.classpath" resource="tasks.properties" loaderref="jetty.loader" />
+ 
   <path id="project.class.path">
     <pathelement location="war/WEB-INF/classes"/>
     <!-- Add any additional non-server libs (such as JUnit) -->
@@ -13,14 +18,14 @@
   <target name="libs" description="Copy libs to WEB-INF/lib">
     <mkdir dir="war/WEB-INF/lib" />
     <copy todir="war/WEB-INF/lib">
-      <fileset dir="lib" includes="*.jar"/>
+      <fileset dir="lib" includes="log4j-1.2.16.jar"/>
     </copy>
   </target>
-
+  
   <target name="javac" description="Compile java source to bytecode">
     <mkdir dir="war/WEB-INF/classes"/>
     <javac srcdir="src" includes="**" encoding="utf-8"
-        excludes=""
+        excludes="ar/com/windsol/start/*.java"
         destdir="war/WEB-INF/classes"
         source="1.6" target="1.6" nowarn="true"
         debug="true" debuglevel="lines,vars,source">
@@ -35,7 +40,7 @@
   <target name="build" depends="libs,javac" description="Build this project" />
 
 
-  <target name="war" depends="build" description="Create a war file">
+  <target name="war" depends="clean, build" description="Create a war file">
     <mkdir dir="out"/>
     <zip destfile="out/vendmodule.war" basedir="war"/>
   </target>
@@ -52,5 +57,11 @@
     <format property="TODAY" pattern="yyyy-MM-dd_HH-mm" />
   </tstamp>
 
+  
+  <target name="jetty">
+    <jetty tempDirectory="jetty-temp">
+		<webApp name="vendmodule" warfile="app" contextpath="app" />
+   </jetty>
+  </target>
 
 </project>
