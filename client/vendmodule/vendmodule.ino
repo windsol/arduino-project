@@ -5,28 +5,28 @@
 #define VEND_RELAY 14               // PIN for enabling vend relay
 #define RELAY_1 2                  // PIN for enabling column 1 relay
 #define RELAY_2 3                  // PIN for enabling column 2 relay
-#define RELAY_3 4                  // PIN for enabling column 3 relay
+#define RELAY_3 15                  // PIN for enabling column 3 relay
 #define RELAY_4 5                  // PIN for enabling column 4 relay
 #define RELAY_5 6                  // PIN for enabling column 5 relay
 #define RELAY_6 7                  // PIN for enabling column 6 relay
 #define RELAY_7 8                  // PIN for enabling column 7 relay
 #define RELAY_8 9                  // PIN for enabling column 8 relay
 
-#define QUERY_TIME 5000           // time between event queries.
+#define QUERY_TIME 6000           // time between event queries.
 
 #define RELAY_ON_TIME 1000          // milisecs of time the relay will be enabled.
 
-#define SERVER_PORT 8080           // app server port
+#define SERVER_PORT 9080           // app server port
 
 // Enter a MAC address for your controller below.
 // Newer Ethernet shields have a MAC address printed on a sticker on the shield
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 
 byte gateway[] = {192, 168, 1, 1};
-IPAddress server(192,168,1,178);  // app server
+//IPAddress server(192,168,1,178);  // app server
 // windsolvendmodule-env.elasticbeanstalk.com
 //char server[] = "windsolvendmodule-env.elasticbeanstalk.com";
-//char server[] = "synt.dyndns.org";
+char server[] = "synt.dyndns.org";
 
 // Set the static IP address to use.
 IPAddress ip(192,168,1,90);
@@ -45,12 +45,12 @@ void setup()
 {
   digitalWrite(RELAY_1, 1);
   digitalWrite(RELAY_2, 1);
-  digitalWrite(RELAY_3, 1);
+  digitalWrite(RELAY_8, 1);
   digitalWrite(RELAY_4, 1);
   digitalWrite(RELAY_5, 1);
   digitalWrite(RELAY_6, 1);
   digitalWrite(RELAY_7, 1);
-  digitalWrite(RELAY_8, 1);
+  digitalWrite(RELAY_3, 1);
   digitalWrite(VEND_RELAY, 1);  
 
   delay(1000);
@@ -59,12 +59,12 @@ void setup()
   // tells arduino RELAY is an output
   pinMode(RELAY_1, OUTPUT);
   pinMode(RELAY_2, OUTPUT);
-  pinMode(RELAY_3, OUTPUT);
+  pinMode(RELAY_8, OUTPUT);
   pinMode(RELAY_4, OUTPUT);
   pinMode(RELAY_5, OUTPUT);
   pinMode(RELAY_6, OUTPUT);
   pinMode(RELAY_7, OUTPUT);
-  pinMode(RELAY_8, OUTPUT);
+  pinMode(RELAY_3, OUTPUT);
   pinMode(VEND_RELAY, OUTPUT);
   
   delay(1000);    
@@ -72,9 +72,13 @@ void setup()
   Serial.begin(9600);
 
   // start the Ethernet connection:
-  Serial.println("try to configure using static IP address");
-  Ethernet.begin(mac, ip);
-  
+  Serial.println("try to configure using dynamic IP address");
+  int result = 0;
+  while ( result != 1) {
+    result = Ethernet.begin(mac);
+    delay(100);
+  }
+  Serial.println("took dynamic ip");
   // give the Ethernet shield a second to initialize:
   delay(1000);
 }
@@ -104,7 +108,7 @@ int query(){
       Serial.println("connected");
       // Make a HTTP request:
       time = millis();
-      client.println("GET /app/events?a=q&id=" + moduleId + "&" + String(time, DEC) + " HTTP/1.1");
+      client.println("GET /events/events?a=q&id=" + moduleId + "&" + String(time, DEC) + " HTTP/1.1");
       client.println("Host: arduino");
       client.println("Connection: close");
       client.println();
@@ -186,9 +190,12 @@ void processEvent(String eventid, String productid, String dest, String type){
     return;
   }  
   // activate relee
-  String st = vend(productid);
+  int st = vend(productid);
+  //Serial.println("After vend " + st );
   // confirm
-  while (confirmEvent(eventid, st) == 0){
+  int retries = 3;
+  while (confirmEvent(eventid, st) == 0 && retries > 0){
+    retries--;
     delay(5000);
   }
 }
@@ -196,44 +203,52 @@ void processEvent(String eventid, String productid, String dest, String type){
 /*
 * Activates the vend relay and then activates the corresponding selection panel relay.
 */
-String vend(String productid){
-  String st = "ng";
-  int relay = getIntValue(productid);
-  Serial.println("Vend!!! " + String(relay, DEC));
-  if (relay >= 1 && relay <=8){
-    relay++;
+int vend(String productid){
+  int vend = 0;
+  int p = getIntValue(productid);
+  int relay = getRelay(p);
+  Serial.println("Vend!!! " + productid);
+  if (p >= 1 && p <=8){
     digitalWrite(VEND_RELAY, LOW);
-    delay(RELAY_ON_TIME);
-    digitalWrite(VEND_RELAY, HIGH);
     delay(100);
+    digitalWrite(VEND_RELAY, HIGH);
+    Serial.println("Vend enable. Now opening relay " + String(relay, DEC));
+    delay(500);
+    
     digitalWrite(relay, LOW);
     delay(RELAY_ON_TIME);
     digitalWrite(relay, HIGH);
-    st = "ok";
-    Serial.println("Vend " + String(relay, DEC) + " " + st);
+   
+    delay(500);
+    Serial.println("Vend done ");
+    vend = 1;
   }
-  delay(1000);
-  
-  return st;
+  delay(2000);
+  //Serial.println("Vend done " + productid + " " + st);
+  return vend;
 }
 
 /*
  * Sends event confirmation to the server.
  */
-int confirmEvent(String eventid, String st){
+int confirmEvent(String eventid, int s){
   int confirmed = 0;
+  String st = (s == 1) ? "ok" : "ng";
   Serial.println("Confirm event... ");
+  client.stop();
   if (client.connect(server, SERVER_PORT)) {
     Serial.println("Sending event confirmation [" + eventid + "]");
-    client.println("GET /app/events?a=u&id=" + moduleId + "&e=" + eventid + "&r=" + st + " HTTP/1.1");
+    client.println("GET /events/events?a=u&id=" + moduleId + "&e=" + eventid + "&r=" + st + " HTTP/1.1");
     client.println("Host: arduino");
     client.println("Connection: close");
     client.println();
     confirmed = 1;
+    //client.flush();
     client.stop();
     Serial.println("Event [" + eventid + "] confirmed.");
   }
   else{
+    client.stop();
     Serial.println("Event [" + eventid + "] confirmation failed");
   }
   return confirmed;
@@ -303,6 +318,34 @@ int getIntValue(String value){
   char num[len];
   value.toCharArray(num, len); 
   return atoi(num);
+}
+
+int getRelay( int p ){
+  if ( p == 1){
+    return RELAY_1;
+  }
+  else if ( p == 2){
+    return RELAY_2;
+  } 
+  else if ( p == 3){
+    return RELAY_3;
+  } 
+  else if ( p == 4){
+    return RELAY_4;
+  } 
+  else if ( p == 5){
+    return RELAY_5;
+  } 
+  else if ( p == 6){
+    return RELAY_6;
+  } 
+  else if ( p == 7){
+    return RELAY_7;
+  } 
+  else if ( p == 8){
+    return RELAY_8;
+  } 
+  return RELAY_1;  
 }
 
 
